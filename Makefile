@@ -49,6 +49,26 @@ export IDF_GITHUB_ASSETS
 .PHONY: all
 all: build
 
+# App library build targets
+APP_BUILD ?= build/app/$(DEVICE)
+APP_IDF_PARAMS := -B $(APP_BUILD) build -DDEVICE=$(DEVICE) -DSDKCONFIG_DEFAULTS="$(SDKCONFIG_DEFAULTS)" -DSDKCONFIG=sdkconfig_app_$(DEVICE) -DIDF_TARGET=$(IDF_TARGET) -DFAT=$(FAT)
+
+.PHONY: build-app
+build-app: checkbuildenv
+	source "$(IDF_PATH)/export.sh" >/dev/null && cd app && idf.py $(APP_IDF_PARAMS)
+
+.PHONY: install-app
+install-app: build-app
+	cd badgelink/tools; ./badgelink.sh fs upload /sd/apps/application/app.so ../../$(APP_BUILD)/app.so
+
+.PHONY: clean-app
+clean-app:
+	rm -rf $(APP_BUILD)
+
+.PHONY: regenerate-symbols
+regenerate-symbols:
+	source "$(IDF_PATH)/export.sh" >/dev/null && cd main && bash symbol_export.sh
+
 # Badgelink
 .PHONY: badgelink
 badgelink:
@@ -217,7 +237,7 @@ efuse:
 
 .PHONY: format
 format:
-	find main/ -iname '*.h' -o -iname '*.c' -o -iname '*.cpp' | xargs clang-format -i
+	find main/ app/main/ -iname '*.h' -o -iname '*.c' -o -iname '*.cpp' | xargs clang-format -i
 
 # Re-compile protobuf files
 # If you are an end user, you do not need to run this;

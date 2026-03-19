@@ -1,0 +1,36 @@
+# FreeRTOS symbols exported by Graceloader
+# The scheduler is a singleton - app MUST use the graceloader's FreeRTOS
+
+# Task management
+xTaskCreatePinnedToCore
+xTaskCreateStaticPinnedToCore
+vTaskDelete
+vTaskDelay
+vTaskDelayUntil
+xTaskGetCurrentTaskHandle
+
+# Queue (actual function names, not macros)
+xQueueGenericCreate
+xQueueGenericSend
+xQueueReceive
+xQueuePeek
+uxQueueMessagesWaiting
+vQueueDelete
+
+# Semaphore/Mutex (actual function names)
+xQueueCreateMutex
+xQueueSemaphoreTake
+xQueueGiveFromISR
+
+# Event Groups
+xEventGroupCreate
+xEventGroupSetBits
+xEventGroupWaitBits
+xEventGroupClearBits
+vEventGroupDelete
+
+# Scheduler
+xTaskResumeAll
+vTaskSuspendAll
+xTaskGetTickCount
+xTaskGetTickCountFromISR

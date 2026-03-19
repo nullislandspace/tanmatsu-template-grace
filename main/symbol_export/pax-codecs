@@ -1,0 +1,9 @@
+# ---- PAX codecs ---- #
+
+# "pax_codecs.h"
+pax_info_png_fd
+pax_info_png_buf
+pax_decode_png_fd
+pax_decode_png_buf
+pax_insert_png_fd
+pax_insert_png_buf
