@@ -30,27 +30,7 @@ for libname in *; do
         -F=-march=rv32imafc_zicsr_zifencei_xesppie -F=-mabi=ilp32f
 done
 
-# Generate exported_symbols.cmake to prevent linker from stripping exported symbols
-echo "Generating exported_symbols.cmake..."
-cmake_file="../exported_symbols.cmake"
-echo "# AUTO-GENERATED - do not edit" > "$cmake_file"
-echo "# Force-include exported symbols so linker doesn't strip them" >> "$cmake_file"
-echo 'target_link_options(${COMPONENT_LIB} INTERFACE' >> "$cmake_file"
-for libname in *; do
-    [ -f "$libname" ] || continue
-    while IFS= read -r line; do
-        line=$(echo "$line" | sed 's/#.*//' | xargs)
-        [ -z "$line" ] && continue
-        # Handle renamed symbols (app_sym = host_sym)
-        if echo "$line" | grep -q '='; then
-            sym=$(echo "$line" | cut -d= -f1 | xargs)
-        else
-            sym="$line"
-        fi
-        echo "    \"-Wl,--undefined=$sym\"" >> "$cmake_file"
-    done < "$libname"
-done
-echo ")" >> "$cmake_file"
+# No exported_symbols.cmake needed — weak references handle missing symbols
 
 echo "Done. Generated files:"
 echo "  main/kbelf_lib_*.c      (symbol tables for graceloader)"

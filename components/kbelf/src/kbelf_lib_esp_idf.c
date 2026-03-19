@@ -3,9 +3,11 @@
 
 #include <kbelf.h>
 
-extern char const symbol_esp_log_write[] asm("esp_log_write");
-extern char const symbol_esp_log_timestamp[] asm("esp_log_timestamp");
-extern char const symbol_esp_err_to_name[] asm("esp_err_to_name");
+// Weak references: symbols provided by ROM or graceloader resolve to their
+// address. Symbols not present resolve to NULL (zero cost, no code pulled in).
+extern char const __attribute__((weak)) symbol_esp_log_write[] asm("esp_log_write");
+extern char const __attribute__((weak)) symbol_esp_log_timestamp[] asm("esp_log_timestamp");
+extern char const __attribute__((weak)) symbol_esp_err_to_name[] asm("esp_err_to_name");
 
 static kbelf_builtin_sym const symbols[] = {
     { .name = "esp_log_write", .vaddr = (size_t) symbol_esp_log_write },

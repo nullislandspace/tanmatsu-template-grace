@@ -3,30 +3,32 @@
 
 #include <kbelf.h>
 
-extern char const symbol_xTaskCreatePinnedToCore[] asm("xTaskCreatePinnedToCore");
-extern char const symbol_xTaskCreateStaticPinnedToCore[] asm("xTaskCreateStaticPinnedToCore");
-extern char const symbol_vTaskDelete[] asm("vTaskDelete");
-extern char const symbol_vTaskDelay[] asm("vTaskDelay");
-extern char const symbol_vTaskDelayUntil[] asm("vTaskDelayUntil");
-extern char const symbol_xTaskGetCurrentTaskHandle[] asm("xTaskGetCurrentTaskHandle");
-extern char const symbol_xQueueGenericCreate[] asm("xQueueGenericCreate");
-extern char const symbol_xQueueGenericSend[] asm("xQueueGenericSend");
-extern char const symbol_xQueueReceive[] asm("xQueueReceive");
-extern char const symbol_xQueuePeek[] asm("xQueuePeek");
-extern char const symbol_uxQueueMessagesWaiting[] asm("uxQueueMessagesWaiting");
-extern char const symbol_vQueueDelete[] asm("vQueueDelete");
-extern char const symbol_xQueueCreateMutex[] asm("xQueueCreateMutex");
-extern char const symbol_xQueueSemaphoreTake[] asm("xQueueSemaphoreTake");
-extern char const symbol_xQueueGiveFromISR[] asm("xQueueGiveFromISR");
-extern char const symbol_xEventGroupCreate[] asm("xEventGroupCreate");
-extern char const symbol_xEventGroupSetBits[] asm("xEventGroupSetBits");
-extern char const symbol_xEventGroupWaitBits[] asm("xEventGroupWaitBits");
-extern char const symbol_xEventGroupClearBits[] asm("xEventGroupClearBits");
-extern char const symbol_vEventGroupDelete[] asm("vEventGroupDelete");
-extern char const symbol_xTaskResumeAll[] asm("xTaskResumeAll");
-extern char const symbol_vTaskSuspendAll[] asm("vTaskSuspendAll");
-extern char const symbol_xTaskGetTickCount[] asm("xTaskGetTickCount");
-extern char const symbol_xTaskGetTickCountFromISR[] asm("xTaskGetTickCountFromISR");
+// Weak references: symbols provided by ROM or graceloader resolve to their
+// address. Symbols not present resolve to NULL (zero cost, no code pulled in).
+extern char const __attribute__((weak)) symbol_xTaskCreatePinnedToCore[] asm("xTaskCreatePinnedToCore");
+extern char const __attribute__((weak)) symbol_xTaskCreateStaticPinnedToCore[] asm("xTaskCreateStaticPinnedToCore");
+extern char const __attribute__((weak)) symbol_vTaskDelete[] asm("vTaskDelete");
+extern char const __attribute__((weak)) symbol_vTaskDelay[] asm("vTaskDelay");
+extern char const __attribute__((weak)) symbol_vTaskDelayUntil[] asm("vTaskDelayUntil");
+extern char const __attribute__((weak)) symbol_xTaskGetCurrentTaskHandle[] asm("xTaskGetCurrentTaskHandle");
+extern char const __attribute__((weak)) symbol_xQueueGenericCreate[] asm("xQueueGenericCreate");
+extern char const __attribute__((weak)) symbol_xQueueGenericSend[] asm("xQueueGenericSend");
+extern char const __attribute__((weak)) symbol_xQueueReceive[] asm("xQueueReceive");
+extern char const __attribute__((weak)) symbol_xQueuePeek[] asm("xQueuePeek");
+extern char const __attribute__((weak)) symbol_uxQueueMessagesWaiting[] asm("uxQueueMessagesWaiting");
+extern char const __attribute__((weak)) symbol_vQueueDelete[] asm("vQueueDelete");
+extern char const __attribute__((weak)) symbol_xQueueCreateMutex[] asm("xQueueCreateMutex");
+extern char const __attribute__((weak)) symbol_xQueueSemaphoreTake[] asm("xQueueSemaphoreTake");
+extern char const __attribute__((weak)) symbol_xQueueGiveFromISR[] asm("xQueueGiveFromISR");
+extern char const __attribute__((weak)) symbol_xEventGroupCreate[] asm("xEventGroupCreate");
+extern char const __attribute__((weak)) symbol_xEventGroupSetBits[] asm("xEventGroupSetBits");
+extern char const __attribute__((weak)) symbol_xEventGroupWaitBits[] asm("xEventGroupWaitBits");
+extern char const __attribute__((weak)) symbol_xEventGroupClearBits[] asm("xEventGroupClearBits");
+extern char const __attribute__((weak)) symbol_vEventGroupDelete[] asm("vEventGroupDelete");
+extern char const __attribute__((weak)) symbol_xTaskResumeAll[] asm("xTaskResumeAll");
+extern char const __attribute__((weak)) symbol_vTaskSuspendAll[] asm("vTaskSuspendAll");
+extern char const __attribute__((weak)) symbol_xTaskGetTickCount[] asm("xTaskGetTickCount");
+extern char const __attribute__((weak)) symbol_xTaskGetTickCountFromISR[] asm("xTaskGetTickCountFromISR");
 
 static kbelf_builtin_sym const symbols[] = {
     { .name = "xTaskCreatePinnedToCore", .vaddr = (size_t) symbol_xTaskCreatePinnedToCore },

@@ -30,8 +30,10 @@ def gen_kbelf_lib(symbols: list[tuple[str,str]], path: str, id: str, kbelf_path:
     fd.write("\n")
     fd.write("#include <kbelf.h>\n")
     fd.write("\n")
+    fd.write("// Weak references: symbols provided by ROM or graceloader resolve to their\n")
+    fd.write("// address. Symbols not present resolve to NULL (zero cost, no code pulled in).\n")
     for sym in symbols:
-        fd.write(f"extern char const symbol_{sym[0]}[] asm(\"{sym[0]}\");\n")
+        fd.write(f"extern char const __attribute__((weak)) symbol_{sym[0]}[] asm(\"{sym[0]}\");\n")
     fd.write("\n")
     fd.write("static kbelf_builtin_sym const symbols[] = {\n")
     for sym in symbols:

@@ -3,12 +3,14 @@
 
 #include <kbelf.h>
 
-extern char const symbol_pax_info_png_fd[] asm("pax_info_png_fd");
-extern char const symbol_pax_info_png_buf[] asm("pax_info_png_buf");
-extern char const symbol_pax_decode_png_fd[] asm("pax_decode_png_fd");
-extern char const symbol_pax_decode_png_buf[] asm("pax_decode_png_buf");
-extern char const symbol_pax_insert_png_fd[] asm("pax_insert_png_fd");
-extern char const symbol_pax_insert_png_buf[] asm("pax_insert_png_buf");
+// Weak references: symbols provided by ROM or graceloader resolve to their
+// address. Symbols not present resolve to NULL (zero cost, no code pulled in).
+extern char const __attribute__((weak)) symbol_pax_info_png_fd[] asm("pax_info_png_fd");
+extern char const __attribute__((weak)) symbol_pax_info_png_buf[] asm("pax_info_png_buf");
+extern char const __attribute__((weak)) symbol_pax_decode_png_fd[] asm("pax_decode_png_fd");
+extern char const __attribute__((weak)) symbol_pax_decode_png_buf[] asm("pax_decode_png_buf");
+extern char const __attribute__((weak)) symbol_pax_insert_png_fd[] asm("pax_insert_png_fd");
+extern char const __attribute__((weak)) symbol_pax_insert_png_buf[] asm("pax_insert_png_buf");
 
 static kbelf_builtin_sym const symbols[] = {
     { .name = "pax_info_png_fd", .vaddr = (size_t) symbol_pax_info_png_fd },
