@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
 #include "esp_log.h"
 #include "esp_vfs_fat.h"
 #include "hal/cache_hal.h"
@@ -14,14 +15,37 @@
 #include "appfs.h"
 #include "sdcard.h"
 #include "fastopen.h"
+#include "esp_system.h"
 #include "sdkconfig.h"
 
 static const char TAG[] = "graceloader";
 
+
+// Restart the device back to the launcher
+static void restart_to_launcher(void) {
+    ESP_LOGI(TAG, "Restarting to launcher...");
+    // Initialize appfs so we can clear boot selection
+    appfsInit(APPFS_PART_TYPE, APPFS_PART_SUBTYPE);
+    // Clear boot selection so the device boots into the launcher, not back into graceloader
+    appfsBootSelect(APPFS_INVALID_FD, NULL);
+    esp_restart();
+}
+
+// App slug name, passed from Makefile via CMake
+#ifndef GRACELOADER_APP_SLUG
+#define GRACELOADER_APP_SLUG "tld.username.gracetemplate"
+#endif
+
 static wl_handle_t wl_handle = WL_INVALID_HANDLE;
 
+// Check if a file exists
+static bool file_exists(const char* path) {
+    struct stat st;
+    return (stat(path, &st) == 0);
+}
+
 void app_main(void) {
-    ESP_LOGI(TAG, "Graceloader starting...");
+    ESP_LOGI(TAG, "Graceloader starting (app: %s)...", GRACELOADER_APP_SLUG);
 
     // 1. Mount internal flash filesystem at /int
     esp_vfs_fat_mount_config_t fat_config = {
@@ -40,26 +64,68 @@ void app_main(void) {
     }
 
     // 2. Mount SD card at /sd (non-fatal if absent)
-    res = sd_mount();
+    res = sdcard_init();
     if (res != ESP_OK) {
         ESP_LOGW(TAG, "SD card not available: %s", esp_err_to_name(res));
     } else {
         ESP_LOGI(TAG, "SD card mounted at /sd");
     }
 
-    // 3. Determine app path from boot selection (set by launcher)
-    bool bootsel_valid        = false;
+    // 3. Determine app path
+    char elf_path[256];
+    bool found = false;
+
+    // Try boot selection first (set by launcher via RTC memory)
+    bool bootsel_valid       = false;
     char const* bootsel_arg  = NULL;
     appfs_handle_t bootsel_handle = appfsBootselGet(&bootsel_valid, &bootsel_arg);
 
-    char elf_path[256];
-    if (bootsel_handle != APPFS_INVALID_FD && bootsel_valid && bootsel_arg != NULL) {
+    ESP_LOGI(TAG, "Boot selection: handle=%d valid=%d arg=%s",
+             (int)bootsel_handle, bootsel_valid,
+             bootsel_arg ? bootsel_arg : "(null)");
+
+    if (bootsel_handle != APPFS_INVALID_FD && bootsel_arg != NULL && strlen(bootsel_arg) > 0) {
+        // Note: bootsel_valid=false means the app crashed last time (crash indicator),
+        // it does NOT mean the path is invalid. We use the path regardless.
+        if (!bootsel_valid) {
+            ESP_LOGW(TAG, "Boot selection marked as crashed (valid=false)");
+        }
         snprintf(elf_path, sizeof(elf_path), "%s/app.so", bootsel_arg);
-        ESP_LOGI(TAG, "Boot selection path: %s", bootsel_arg);
+        ESP_LOGI(TAG, "Trying boot selection path: %s", elf_path);
+        if (file_exists(elf_path)) {
+            found = true;
+        } else {
+            ESP_LOGW(TAG, "app.so not found at boot selection path");
+        }
     } else {
-        ESP_LOGE(TAG, "No boot selection available - cannot determine app path");
-        ESP_LOGE(TAG, "App must be launched from the Tanmatsu launcher");
-        return;
+        ESP_LOGW(TAG, "No boot selection available");
+    }
+
+    // Fallback: search for app.so using the compiled-in slug name
+    // Try SD card first, then internal flash
+    if (!found) {
+        snprintf(elf_path, sizeof(elf_path), "/sd/apps/%s/app.so", GRACELOADER_APP_SLUG);
+        ESP_LOGI(TAG, "Trying fallback path: %s", elf_path);
+        if (file_exists(elf_path)) {
+            found = true;
+        }
+    }
+
+    if (!found) {
+        snprintf(elf_path, sizeof(elf_path), "/int/apps/%s/app.so", GRACELOADER_APP_SLUG);
+        ESP_LOGI(TAG, "Trying fallback path: %s", elf_path);
+        if (file_exists(elf_path)) {
+            found = true;
+        }
+    }
+
+    if (!found) {
+        ESP_LOGE(TAG, "Could not find app.so for %s", GRACELOADER_APP_SLUG);
+        ESP_LOGE(TAG, "Searched:");
+        ESP_LOGE(TAG, "  - Boot selection path");
+        ESP_LOGE(TAG, "  - /sd/apps/%s/app.so", GRACELOADER_APP_SLUG);
+        ESP_LOGE(TAG, "  - /int/apps/%s/app.so", GRACELOADER_APP_SLUG);
+        restart_to_launcher();
     }
 
     ESP_LOGI(TAG, "Loading app from: %s", elf_path);
@@ -68,19 +134,19 @@ void app_main(void) {
     kbelf_dyn dyn = kbelf_dyn_create(0);
     if (!dyn) {
         ESP_LOGE(TAG, "Failed to create kbelf dynamic context");
-        return;
+        restart_to_launcher();
     }
 
     if (!kbelf_dyn_set_exec(dyn, elf_path, NULL)) {
         ESP_LOGE(TAG, "Failed to open ELF file: %s", elf_path);
         kbelf_dyn_destroy(dyn);
-        return;
+        restart_to_launcher();
     }
 
     if (!kbelf_dyn_load(dyn)) {
         ESP_LOGE(TAG, "Failed to load ELF: %s", elf_path);
         kbelf_dyn_destroy(dyn);
-        return;
+        restart_to_launcher();
     }
 
     // Per-segment I-cache invalidation is handled by kbelfx_cache_sync()

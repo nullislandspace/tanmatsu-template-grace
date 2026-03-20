@@ -46,13 +46,13 @@ for item in $LINK_LIBS; do
         *.a) ;;
         *) continue ;;
     esac
-    # Skip system libs with non-PIC assembly
+    # Skip only libraries with non-PIC assembly or boot-only code
     case "$(basename "$item")" in
-        libriscv.a|libesp_system.a|libesp_rom.a|libbootloader_support.a) continue ;;
-        libesp_app_format.a|libesp_bootloader_format.a|libapp_update.a) continue ;;
-        libesp_gdbstub.a|libespcoredump.a|libnvs_sec_provider.a) continue ;;
-        libesp_security.a|librt.a|libcxx.a|libbsp_stub.a) continue ;;
-        libunity.a|libcmock.a) continue ;;
+        libriscv.a) continue ;;  # Interrupt vectors - hand-written assembly
+        libesp_app_format.a|libesp_bootloader_format.a|libapp_update.a) continue ;;  # Boot-only
+        libesp_gdbstub.a|libespcoredump.a) continue ;;  # Debug-only
+        libnvs_sec_provider.a|librt.a|libcxx.a|libbsp_stub.a) continue ;;  # Unused
+        libunity.a|libcmock.a) continue ;;  # Test frameworks
     esac
     # Resolve relative path
     if [[ "$item" != /* ]]; then
@@ -61,17 +61,30 @@ for item in $LINK_LIBS; do
     [ -f "$item" ] && LIBS="$LIBS $item"
 done
 
+# Find ESP-IDF linker scripts that provide ROM symbols and peripheral addresses
+IDF_PATH="${IDF_PATH:-$(pwd)/esp-idf}"
+ROM_LD_DIR="${IDF_PATH}/components/esp_rom/esp32p4/ld"
+SOC_LD_DIR="${IDF_PATH}/components/soc/esp32p4/ld"
+
+# Collect all ROM linker scripts
+ROM_LD_FLAGS=""
+for ld in "${ROM_LD_DIR}"/esp32p4.rom*.ld; do
+    [ -f "$ld" ] && ROM_LD_FLAGS="$ROM_LD_FLAGS -Wl,-T,$ld"
+done
+
 echo "Linking app.so..."
 riscv32-esp-elf-gcc \
     -shared -nostdlib \
     -Wl,--gc-sections \
     -Wl,-Bsymbolic \
     -Wl,--version-script="${VERSION_SCRIPT}" \
+    -Wl,-T,"${SOC_LD_DIR}/esp32p4.peripherals.ld" \
+    $ROM_LD_FLAGS \
     -Wl,-T,"${APP_LD}" \
     -Wl,-Map="${BUILD_DIR}/app_so.map" \
     -L"${FAKELIB_DIR}" \
     $LIBS \
-    -lc -lm -lgcc -lpthread -lfreertos -lesp-idf \
+    -lall \
     -o "${OUTPUT}"
 
 echo "app.so linked successfully:"

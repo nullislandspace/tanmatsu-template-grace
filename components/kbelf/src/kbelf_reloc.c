@@ -155,8 +155,15 @@ static bool rela_perform(kbelf_reloc reloc, kbelf_file file, kbelf_inst inst, si
                 KBELF_ERROR(abort, "Unable to find anonymous symbol " KBELF_FMT_SIZE, (int)sym)
             }
             bool found = find_sym(reloc, symname, &symval);
-            if (!found)
-                KBELF_ERROR(abort, "Unable to find symbol " KBELF_FMT_CSTR, symname)
+            if (!found) {
+                // Check if symbol is weak (bind type 2) — resolve to 0 instead of failing
+                uint8_t bind = st.info >> 4;
+                if (bind == 2) { // STB_WEAK
+                    symval = 0;
+                } else {
+                    KBELF_ERROR(abort, "Unable to find symbol " KBELF_FMT_CSTR, symname)
+                }
+            }
             kbelfx_free(symname);
         }
         KBELF_LOGD(

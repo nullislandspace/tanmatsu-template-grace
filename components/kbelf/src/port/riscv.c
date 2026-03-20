@@ -182,6 +182,9 @@ bool kbelfp_reloc_apply(
     kbelf_file file, kbelf_inst inst, uint32_t type, kbelf_addr sym, kbelf_addr addend, kbelf_laddr laddr
 ) {
     (void)file;
+    // Handle R_RISCV_NONE (type 0) — no-op relocation, just ignore
+    if (type == 0) return true;
+
     switch ((riscv_reloc_t)type) {
         case ABS32: store(uint32_t, S + A); return true;
 

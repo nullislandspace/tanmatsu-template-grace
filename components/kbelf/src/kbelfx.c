@@ -148,22 +148,12 @@ kbelf_file kbelfx_find_lib(char const* needed) {
     return kbelf_file_open(needed, NULL);
 }
 
-// Built-in libraries — exports ROM functions + graceloader's own functions
-// Weak references mean: ROM-provided symbols cost zero, missing symbols resolve to NULL
-extern kbelf_builtin_lib const app_elf_lib_c;
-extern kbelf_builtin_lib const app_elf_lib_m;
-extern kbelf_builtin_lib const app_elf_lib_gcc;
-extern kbelf_builtin_lib const app_elf_lib_pthread;
-extern kbelf_builtin_lib const app_elf_lib_freertos;
-extern kbelf_builtin_lib const app_elf_lib_esp_idf;
+// Built-in library — exports ALL graceloader symbols (ROM + own code)
+// Weak references mean: zero cost, missing symbols resolve to NULL
+extern kbelf_builtin_lib const app_elf_lib_all;
 
 kbelf_builtin_lib const* kbelfx_builtin_libs[] = {
-    &app_elf_lib_c,
-    &app_elf_lib_m,
-    &app_elf_lib_gcc,
-    &app_elf_lib_pthread,
-    &app_elf_lib_freertos,
-    &app_elf_lib_esp_idf,
+    &app_elf_lib_all,
 };
 
 size_t kbelfx_builtin_libs_len = sizeof(kbelfx_builtin_libs) / sizeof(void*);

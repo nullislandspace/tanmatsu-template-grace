@@ -11,6 +11,16 @@ OUTPUT_ARCH(riscv)
 
 ENTRY(_start)
 
+/* TLS section boundary symbols - referenced by ESP-IDF internals.
+   Since we compile with -D__thread= (no actual TLS), these are all zero. */
+PROVIDE(_thread_local_data_start = 0);
+PROVIDE(_thread_local_data_end = 0);
+PROVIDE(_thread_local_bss_start = 0);
+PROVIDE(_thread_local_bss_end = 0);
+
+/* RISC-V global pointer - set to start of .sdata for GP-relative addressing */
+PROVIDE(__global_pointer$ = 0);
+
 SECTIONS
 {
     /* Dynamic linking sections */

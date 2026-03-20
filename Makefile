@@ -16,6 +16,11 @@ FAT ?= 0
 SDKCONFIG_DEFAULTS ?= sdkconfigs/general;sdkconfigs/$(DEVICE)
 SDKCONFIG ?= sdkconfig_$(DEVICE)
 
+# App installation settings
+APP_INSTALL_BASE_PATH ?= /int/apps/
+APP_SLUG_NAME ?= tld.username.gracetemplate
+APP_INSTALL_PATH = $(APP_INSTALL_BASE_PATH)$(APP_SLUG_NAME)
+
 ####
 
 # Set IDF_TARGET based on device name
@@ -37,7 +42,7 @@ $(warning "Unknown device, defaulting to ESP32 $(DEVICE)")
 IDF_TARGET ?= esp32
 endif
 
-IDF_PARAMS := -B $(BUILD) build -DDEVICE=$(DEVICE) -DSDKCONFIG_DEFAULTS="$(SDKCONFIG_DEFAULTS)" -DSDKCONFIG=$(SDKCONFIG) -DIDF_TARGET=$(IDF_TARGET) -DFAT=$(FAT)
+IDF_PARAMS := -B $(BUILD) build -DDEVICE=$(DEVICE) -DSDKCONFIG_DEFAULTS="$(SDKCONFIG_DEFAULTS)" -DSDKCONFIG=$(SDKCONFIG) -DIDF_TARGET=$(IDF_TARGET) -DFAT=$(FAT) -DAPP_SLUG_NAME=$(APP_SLUG_NAME)
 
 #####
 
@@ -62,7 +67,8 @@ build-app: checkbuildenv submodules
 
 .PHONY: install-app
 install-app: build-app
-	cd badgelink/tools; ./badgelink.sh fs upload /sd/apps/application/app.so ../../$(APP_BUILD)/app.so
+	@echo "Installing app.so to $(APP_INSTALL_PATH)/app.so..."
+	cd badgelink/tools; ./badgelink.sh fs upload $(APP_INSTALL_PATH)/app.so ../../$(APP_BUILD)/app.so
 
 .PHONY: clean-app
 clean-app:
@@ -81,8 +87,24 @@ badgelink:
 
 .PHONY: install
 install: build
-install:
-	cd badgelink/tools; ./badgelink.sh appfs upload application "template application" 0 ../../$(BUILD)/application.bin
+	@echo "=== Installing to device ==="
+	@echo "Creating directory $(APP_INSTALL_PATH)..."
+	cd badgelink/tools; ./badgelink.sh fs mkdir $(APP_INSTALL_PATH) || true
+	@echo "Uploading metadata.json..."
+	cd badgelink/tools; ./badgelink.sh fs upload $(APP_INSTALL_PATH)/metadata.json ../../metadata/metadata.json
+	@echo "Uploading icon16.png..."
+	cd badgelink/tools; ./badgelink.sh fs upload $(APP_INSTALL_PATH)/icon16.png ../../metadata/icon16.png
+	@echo "Uploading icon32.png..."
+	cd badgelink/tools; ./badgelink.sh fs upload $(APP_INSTALL_PATH)/icon32.png ../../metadata/icon32.png
+	@echo "Uploading icon64.png..."
+	cd badgelink/tools; ./badgelink.sh fs upload $(APP_INSTALL_PATH)/icon64.png ../../metadata/icon64.png
+	@echo "Uploading graceloader.bin..."
+	cd badgelink/tools; ./badgelink.sh fs upload $(APP_INSTALL_PATH)/graceloader.bin ../../$(BUILD)/application.bin
+	@echo "Uploading app.so..."
+	cd badgelink/tools; ./badgelink.sh fs upload $(APP_INSTALL_PATH)/app.so ../../$(APP_BUILD)/app.so
+	@echo "Installing graceloader to appfs as $(APP_SLUG_NAME)..."
+	cd badgelink/tools; ./badgelink.sh appfs upload $(APP_SLUG_NAME) "$(APP_SLUG_NAME)" 0 ../../$(BUILD)/application.bin
+	@echo "=== Installation complete ==="
 
 .PHONY: run
 run:

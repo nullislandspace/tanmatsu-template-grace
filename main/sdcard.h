@@ -1,12 +1,10 @@
 #pragma once
 
+#include <stdbool.h>
 #include "esp_err.h"
 
-typedef enum {
-    SD_STATUS_NOT_PRESENT,
-    SD_STATUS_OK,
-    SD_STATUS_ERROR,
-} sd_status_t;
+// Initialize SD card power and mount filesystem at /sd
+esp_err_t sdcard_init(void);
 
-esp_err_t   sd_mount(void);
-sd_status_t sd_status(void);
+// Check if SD card is mounted
+bool sdcard_is_mounted(void);
