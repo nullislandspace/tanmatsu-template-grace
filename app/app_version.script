@@ -1,0 +1,4 @@
+/* Only export _start to the dynamic symbol table.
+   All other symbols are local — this dramatically reduces
+   .dynsym/.dynstr/.hash/.rela.dyn overhead. */
+{ global: _start; local: *; };

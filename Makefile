@@ -54,8 +54,11 @@ APP_BUILD ?= build/app/$(DEVICE)
 APP_IDF_PARAMS := -B $(APP_BUILD) build -DDEVICE=$(DEVICE) -DSDKCONFIG_DEFAULTS="$(SDKCONFIG_DEFAULTS)" -DSDKCONFIG=sdkconfig_app_$(DEVICE) -DIDF_TARGET=$(IDF_TARGET) -DFAT=$(FAT)
 
 .PHONY: build-app
-build-app: checkbuildenv
-	source "$(IDF_PATH)/export.sh" >/dev/null && cd app && idf.py $(APP_IDF_PARAMS)
+build-app: checkbuildenv submodules
+	@echo "=== Building app components (app.elf failure is expected) ==="
+	source "$(IDF_PATH)/export.sh" >/dev/null && cd app && idf.py -B "$(CURDIR)/$(APP_BUILD)" build -DDEVICE=$(DEVICE) -DSDKCONFIG_DEFAULTS="$(SDKCONFIG_DEFAULTS)" -DSDKCONFIG=sdkconfig_app_$(DEVICE) -DIDF_TARGET=$(IDF_TARGET) -DFAT=$(FAT) || true
+	@echo "=== Linking app.so ==="
+	source "$(IDF_PATH)/export.sh" >/dev/null && bash app/link_app_so.sh $(APP_BUILD) "$(CURDIR)/app"
 
 .PHONY: install-app
 install-app: build-app
@@ -128,7 +131,7 @@ menuconfig:
 
 .PHONY: clean
 clean:
-	rm -rf $(BUILD)
+	rm -rf build
 	rm -f .submodules_update_done
 
 .PHONY: fullclean
@@ -156,9 +159,16 @@ checkbuildenv:
 
 # Building
 
-.PHONY: build
-build: icons checkbuildenv submodules
+.PHONY: build-graceloader
+build-graceloader: icons checkbuildenv submodules
+	@echo "=== Building graceloader ==="
 	source "$(IDF_PATH)/export.sh" >/dev/null && idf.py $(IDF_PARAMS)
+
+.PHONY: build
+build: build-graceloader build-app
+	@echo "=== Build complete ==="
+	@echo "Graceloader: $(BUILD)/application.bin"
+	@echo "App library: $(APP_BUILD)/app.so"
 
 # Hardware
 
