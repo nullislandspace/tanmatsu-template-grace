@@ -16,6 +16,7 @@
       "revision": 1,
       "type": "script",
       "interpreter": "at.cavac.graceloader",
+      "executable": "app.so",
       "assets": [
         {"source_file": "app.so", "target_file": "app.so"}
       ]

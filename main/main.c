@@ -4,7 +4,6 @@
 #include "bsp/input.h"
 #include "bsp/led.h"
 #include "bsp/power.h"
-#include "custom_certificates.h"
 #include "driver/gpio.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_types.h"
@@ -15,8 +14,6 @@
 #include "pax_gfx.h"
 #include "pax_text.h"
 #include "portmacro.h"
-#include "wifi_connection.h"
-#include "wifi_remote.h"
 
 // Constants
 static char const TAG[] = "main";
@@ -146,41 +143,6 @@ void app_main(void) {
     bsp_led_set_pixel(5, 0xFF00FF);  // Cyan
     bsp_led_send();                  // Send data to the coprocessor
     bsp_led_set_mode(false);         // Take control over all LEDs by disabling automatic mode
-
-    // Start WiFi stack (if your app does not require WiFi or BLE you can remove this section)
-    pax_background(&fb, WHITE);
-    pax_draw_text(&fb, BLACK, pax_font_sky_mono, 16, 0, 0, "Connecting to radio...");
-    blit();
-
-    if (wifi_remote_initialize() == ESP_OK) {
-
-        pax_background(&fb, WHITE);
-        pax_draw_text(&fb, BLACK, pax_font_sky_mono, 16, 0, 0, "Starting WiFi stack...");
-        blit();
-        wifi_connection_init_stack();  // Start the Espressif WiFi stack
-
-        pax_background(&fb, WHITE);
-        pax_draw_text(&fb, BLACK, pax_font_sky_mono, 16, 0, 0, "Connecting to WiFi network...");
-        blit();
-
-        if (wifi_connect_try_all() == ESP_OK) {
-            pax_background(&fb, WHITE);
-            pax_draw_text(&fb, BLACK, pax_font_sky_mono, 16, 0, 0, "Succesfully connected to WiFi network");
-            blit();
-        } else {
-            pax_background(&fb, RED);
-            pax_draw_text(&fb, WHITE, pax_font_sky_mono, 16, 0, 0, "Failed to connect to WiFi network");
-            blit();
-        }
-    } else {
-        bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
-        ESP_LOGE(TAG, "WiFi radio not responding, WiFi not available");
-        pax_background(&fb, RED);
-        pax_draw_text(&fb, WHITE, pax_font_sky_mono, 16, 0, 0, "WiFi unavailable");
-        blit();
-    }
-
-    vTaskDelay(pdMS_TO_TICKS(500));
 
     // Main section of the app
 
