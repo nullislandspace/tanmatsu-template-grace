@@ -17,6 +17,7 @@ set(APP_SOURCES
 set(APP_INCLUDES
     main
     include
+    include/esp_additions/include
 )
 
 # Compile app sources as a relocatable object library
@@ -27,6 +28,7 @@ target_compile_options(app_obj PRIVATE
     -Os -fPIC
     -ffunction-sections -fdata-sections -fno-common
     -D__thread=
+    -DESP_PLATFORM
 )
 
 # ESP-IDF normally force-includes FreeRTOS headers for all components
