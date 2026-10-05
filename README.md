@@ -53,6 +53,17 @@ Results land in `results/<UTC>-<test>-<scene>/` as `console.log` + `result.json`
 references live in `tests/refs/manifest.json`. Exit codes: 0 ok, 1 link, 2 crash,
 3 the test reported bad, 4 an image mismatch, 5 usage.
 
+**Which serial port.** A Tanmatsu shows two Espressif USB-serial units once
+the P4 is in debug mode: the P4's and the ESP32-C6 radio coprocessor's.
+Opening the C6's resets the radio and crashes the running badge, so the
+tests never guess a `/dev/ttyACM*`. `tools/p4port.sh` finds the P4's
+console by its USB hub port, which it learns during `make install`
+(BadgeLink mode); every tool checks a port with it before opening one. To
+name the console yourself, set `P4_CONSOLE` (checked the same way; an
+`rfc2217://` URL is taken as given). `PORT` is not read. `install` and
+`run` talk to the P4 over USB directly unless `BADGELINKPORT` is set.
+`tools/p4port_test.sh` tests `p4port.sh` against fake USB trees.
+
 ### What it is
 
 | File | What |
