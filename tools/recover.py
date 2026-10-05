@@ -21,10 +21,13 @@ import time
 import serial
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from testrun import connect, parse_record, read_line  # noqa: E402
+from testrun import check_console, connect, parse_record, read_line  # noqa: E402
 
 
 def hard_reset(url):
+    # Only ever the P4's console: on a Tanmatsu the other Espressif tty is
+    # the ESP32-C6's, and resetting that crashes the badge.
+    check_console(url)
     from esp_idf_monitor.base.chip_specific_config import get_chip_config
     from esp_pylib.serial_reset import hard_reset as pylib_hard_reset
 
@@ -73,7 +76,7 @@ def recover(url, timeout=60, log=None):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--port", default=os.environ.get("PORT"))
+    ap.add_argument("--port", required=True, help="the P4's debug console, from tools/p4port.sh; $PORT is not read")
     ap.add_argument("--timeout", type=float, default=60)
     args = ap.parse_args()
     return recover(args.port, args.timeout)

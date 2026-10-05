@@ -1,5 +1,20 @@
-PORT ?= /dev/ttyACM0
-BADGELINKPORT ?= $(PORT)
+# The P4's debug console: tools/p4port.sh finds it by the P4's USB hub
+# port, so the C6's tty (also an Espressif USB-serial/JTAG unit) is never
+# opened by mistake. P4_CONSOLE overrides it and is checked the same way;
+# an rfc2217:// URL (a badge forwarded over the network) is taken as given.
+# PORT is not read on purpose: it used to default to /dev/ttyACM0, which on
+# a Tanmatsu is often the C6.
+P4_CONSOLE ?=
+P4_FIND = tools/p4port.sh $(if $(P4_CONSOLE),--check '$(P4_CONSOLE)')
+# In a recipe: the console into $$console, or stop.
+CONSOLE_SH = $(if $(PORT),echo "note: PORT is not used here; P4_CONSOLE picks the console" >&2;) \
+	console="$$($(P4_FIND))" || exit 1;
+# Empty: badgelink talks to the P4 over USB directly (16d0:0f9a). On a
+# Tanmatsu /dev/ttyACM* is the ESP32-C6 radio coprocessor, and opening
+# it resets the radio and crashes the running badge -- so install / run
+# never touch it unless BADGELINKPORT is set on purpose (a serial port,
+# or host:port for a TCP proxy).
+BADGELINKPORT ?=
 
 SHELL := /usr/bin/env bash
 
@@ -71,12 +86,20 @@ engine:
 TEST ?=
 TESTFLAGS ?=
 
-.PHONY: testrun cycle testrefs testcompare recover
+.PHONY: testrun cycle testrefs testcompare recover wait_console
+# The console appears once the app runs (the badge leaves BadgeLink mode
+# for it); p4port.sh says why if it does not.
+wait_console:
+	for i in $$(seq 1 30); do $(P4_FIND) >/dev/null 2>&1 && exit 0; sleep 1; done; \
+	$(P4_FIND) >/dev/null || true; \
+	echo "the P4's console did not appear in 30 s"; exit 1
+
 testrun:
-	source "$(IDF_SOURCE)" >/dev/null && \
-	python3 -u tools/testrun.py --port "$(PORT)" --badgelink-conn "$(BADGELINK_CONN)" $(TESTFLAGS) -- $(TEST)
+	$(CONSOLE_SH) source "$(IDF_SOURCE)" >/dev/null && \
+	python3 -u tools/testrun.py --port "$$console" --badgelink-conn "$(BADGELINK_CONN)" $(TESTFLAGS) -- $(TEST)
 
 cycle: build install run
+	$(MAKE) wait_console
 	$(MAKE) testrun
 
 testrefs:
@@ -86,7 +109,7 @@ testcompare:
 	$(MAKE) cycle TESTFLAGS="--compare"
 
 recover:
-	source "$(IDF_SOURCE)" >/dev/null && python3 tools/recover.py --port "$(PORT)"
+	$(CONSOLE_SH) source "$(IDF_SOURCE)" >/dev/null && python3 tools/recover.py --port "$$console"
 
 # Badgelink
 .PHONY: badgelink
@@ -96,12 +119,16 @@ badgelink:
 	git clone https:///github.com/nullislandspace/esp32-component-badgelink.git badgelink
 	cd badgelink/tools; ./install.sh
 
-# Determine badgelink connection argument: --tcp for host:port, --port for serial devices
-BADGELINK_CONN := $(if $(findstring :,$(BADGELINKPORT)),--tcp $(BADGELINKPORT),--port $(BADGELINKPORT))
+# The badgelink connection: none (USB, 16d0:0f9a) unless BADGELINKPORT is
+# set; then --tcp for host:port (a TCP proxy), --port for a serial device --
+# whose /dev/serial/by-path name has colons in it too.
+BADGELINK_CONN := $(if $(BADGELINKPORT),$(if $(shell echo '$(BADGELINKPORT)' | grep -E '^[^/]+:[0-9]+$$'),--tcp,--port) $(BADGELINKPORT))
 
 .PHONY: install
 install: build
 	@echo "=== Installing to device ==="
+	# BadgeLink mode: the moment to learn the P4's USB port (tools/p4port.sh).
+	tools/p4port.sh --learn || true
 	@echo "Creating directory $(APP_INSTALL_PATH)..."
 	cd badgelink/tools; ./badgelink.sh $(BADGELINK_CONN) fs mkdir $(APP_INSTALL_PATH) || true
 	@echo "Uploading metadata.json..."
@@ -134,13 +161,13 @@ run:
 # launcher listens for it (see ../tanmatsu-launcher/main/usb_device.c), so
 # this only works against firmware that implements the listener.
 #
-# PORT accepts either a local device path (e.g. /dev/ttyACM0) or an rfc2217://
-# URL pointing at ../tanmatsu-badgefs/rfc2217proxy when the device is
-# forwarded over the network.
+# The console is the P4's (tools/p4port.sh), or P4_CONSOLE: the P4's tty, or
+# an rfc2217:// URL pointing at ../tanmatsu-badgefs/rfc2217proxy when the
+# device is forwarded over the network.
 .PHONY: mode_badgelink
 mode_badgelink:
-	source "$(IDF_SOURCE)" >/dev/null && \
-	python3 -c "import serial, sys; s=serial.serial_for_url('$(PORT)', timeout=1); s.write(b'BADGELINK\n'); s.flush(); sys.stdout.write(s.read(128).decode(errors='replace')); s.close()"
+	$(CONSOLE_SH) source "$(IDF_SOURCE)" >/dev/null && \
+	python3 -c "import serial, sys; s=serial.serial_for_url(sys.argv[1], timeout=1); s.write(b'BADGELINK\n'); s.flush(); sys.stdout.write(s.read(128).decode(errors='replace')); s.close()" "$$console"
 
 # The other direction: ask the firmware (in BadgeLink mode) to switch its USB
 # back to flash/monitor mode, through BadgeLink's own `mode` command. Uses the
